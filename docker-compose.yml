@@ -7,14 +7,18 @@ services:
       - "8000:8000"
 
   hospital1:
-    build: ./hospital-node
-    ports:
-      - "8001:8000"
+  build: ./hospital-node
+  ports:
+    - "8001:8000"
+  environment:
+    - HOSPITAL_ID=hospital-1
 
-  hospital2:
-    build: ./hospital-node
-    ports:
-      - "8002:8000"
+hospital2:
+  build: ./hospital-node
+  ports:
+    - "8002:8000"
+  environment:
+    - HOSPITAL_ID=hospital-2
 
   auth:
     build: ./auth-service
