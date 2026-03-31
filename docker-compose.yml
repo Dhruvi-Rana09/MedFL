@@ -1,0 +1,32 @@
+
+services:
+
+  aggregator:
+    build: ./aggregator-service
+    ports:
+      - "8000:8000"
+
+  hospital1:
+    build: ./hospital-node
+    ports:
+      - "8001:8000"
+
+  hospital2:
+    build: ./hospital-node
+    ports:
+      - "8002:8000"
+
+  auth:
+    build: ./auth-service
+    ports:
+      - "8003:8000"
+
+  storage:
+    build: ./model-storage-service
+    ports:
+      - "8004:8000"
+
+  monitor:
+    build: ./monitoring-service
+    ports:
+      - "8005:8000"
