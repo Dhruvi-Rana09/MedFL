@@ -50,7 +50,6 @@ async def login(req: RegisterRequest):
 @app.get("/auth/public-key")
 async def get_public_key():
     # Other services call this once to cache the public key
-    # They can then verify tokens locally without calling Auth every time
     return {"public_key": PUBLIC_KEY, "algorithm": "RS256"}
 
 @app.post("/auth/revoke")

@@ -1,4 +1,21 @@
-venv/
-__pycache__/
-*.pyc
+# Secrets & Keys
+**/certs/
+*.pem
 .env
+
+# Python
+**/__pycache__/
+*.pyc
+venv/
+.pytest_cache/
+.coverage
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
