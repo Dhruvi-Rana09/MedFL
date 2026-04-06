@@ -1,4 +1,3 @@
-
 services:
 
   aggregator:
@@ -15,12 +14,19 @@ services:
     build: ./hospital-node
     ports:
       - "8002:8000"
-
   auth:
-    build: ./auth-service
+    build: ./auth-service # Build from Dockerfile in this folder
     ports:
-      - "8003:8000"
+      - "8003:8000" # laptop:8000 → container:8000
+    networks: [ medfl-net ]
+    environment:
+      REDIS_URL: redis://redis:6379 # env var passed into the container
+    volumes:
+      - ./auth-service/certs:/app/certs
 
+  redis:
+    image: redis:7-alpine # Pull this image from Docker Hub
+    networks: [ medfl-net ]
   storage:
     build: ./model-storage-service
     ports:
@@ -30,3 +36,6 @@ services:
     build: ./monitoring-service
     ports:
       - "8005:8000"
+
+networks:
+  medfl-net:
