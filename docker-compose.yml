@@ -5,16 +5,23 @@ services:
     build: ./aggregator-service
     ports:
       - "8000:8000"
+    depends_on:
+      - storage
+      - monitor
 
   hospital1:
     build: ./hospital-node
     ports:
       - "8001:8000"
+    depends_on:
+      - aggregator
 
   hospital2:
     build: ./hospital-node
     ports:
       - "8002:8000"
+    depends_on:
+      - aggregator
 
   auth:
     build: ./auth-service
@@ -25,8 +32,26 @@ services:
     build: ./model-storage-service
     ports:
       - "8004:8000"
+    volumes:
+      - storage-data:/app/data
 
   monitor:
     build: ./monitoring-service
     ports:
       - "8005:8000"
+    volumes:
+      - monitor-data:/app/data
+
+  dashboard:
+    build:
+      context: ./monitoring-service
+      dockerfile: Dockerfile.dashboard
+    ports:
+      - "8501:8501"
+    depends_on:
+      - storage
+      - monitor
+
+volumes:
+  storage-data:
+  monitor-data:
