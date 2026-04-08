@@ -25,6 +25,8 @@ services:
     build: ./model-storage-service
     ports:
       - "8004:8000"
+    volumes:
+      - ./model-storage-service/app/models:/app/app/models
 
   monitor:
     build: ./monitoring-service
