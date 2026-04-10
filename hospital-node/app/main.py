@@ -1,25 +1,3 @@
-# from fastapi import FastAPI
-# import requests
-# import random
-
-# app = FastAPI()
-
-# AGGREGATOR_URL = "http://aggregator:8000"
-
-# @app.get("/")
-# def root():
-#     return {"message": "Hospital Node Running"}
-
-# @app.get("/train")
-# def train():
-#     # Fake training (simulate ML)
-#     weights = [random.random(), random.random()]
-
-#     requests.post(f"{AGGREGATOR_URL}/receive-update",
-#                   json={"weights": weights})
-
-#     return {"trained_weights": weights}
-
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import httpx
@@ -40,10 +18,6 @@ def health():
 # ─── Train & Send Update ────────────────────────────────────
 @app.post("/train")
 async def train_and_send():
-    """
-    1. Run local training
-    2. Send weights to aggregator
-    """
     weights, num_samples = local_train()
 
     payload = {
@@ -73,16 +47,35 @@ async def train_and_send():
         "aggregator_response": response.json()
     }
 
-# ─── Receive Global Model ────────────────────────────────────
+# ─── Receive Global Model (push FROM aggregator) ─────────────
 @app.post("/receive-model")
 async def receive_model(model: GlobalModel):
-    """
-    Called by Aggregator to push the updated global model back.
-    """
-    # In real FL: load these weights into your local model
     print(f"[{HOSPITAL_ID}] Received global model: {model.weights[:3]}...")
     return {
         "status": "model_received",
         "hospital_id": HOSPITAL_ID,
         "weights_preview": model.weights[:3]
     }
+
+# ─── Fetch Global Model (pull BY hospital) ───────────────────
+@app.get("/fetch-model")
+async def fetch_global_model():
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{AGGREGATOR_URL}/send-model",
+                timeout=10.0
+            )
+            response.raise_for_status()
+            model = response.json()
+            print(f"[{HOSPITAL_ID}] Fetched global model round {model.get('round')}: {model['weights'][:3]}...")
+            return {
+                "status": "model_fetched",
+                "hospital_id": HOSPITAL_ID,
+                "round": model.get("round"),
+                "weights_preview": model["weights"][:3]
+            }
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Aggregator unreachable: {str(e)}")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Aggregator error: {e.response.text}")

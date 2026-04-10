@@ -3,3 +3,5 @@ uvicorn
 requests
 numpy
 httpx
+pandas
+scikit-learn

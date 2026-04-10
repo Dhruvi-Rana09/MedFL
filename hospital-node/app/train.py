@@ -1,19 +1,34 @@
+import pandas as pd
 import numpy as np
-from app.config import INPUT_SIZE
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import StandardScaler
+import os
+
+from app.config import HOSPITAL_ID
 
 def local_train():
-    """
-    Simulate local training on hospital data.
-    Returns: model weights (list of floats) + number of samples trained on
-    """
-    # Simulate random starting weights (like a neural net layer)
-    weights = np.random.randn(INPUT_SIZE).tolist()
-
-    # Simulate 'learning' — small random gradient update
-    learning_rate = 0.01
-    gradient = np.random.randn(INPUT_SIZE)
-    updated_weights = (np.array(weights) - learning_rate * gradient).tolist()
-
-    num_samples = 100  # Simulated dataset size
-
-    return updated_weights, num_samples
+    # Each hospital loads its own CSV
+    data_path = f"app/data/{HOSPITAL_ID}.csv"
+    
+    if not os.path.exists(data_path):
+        raise FileNotFoundError(f"No dataset found for {HOSPITAL_ID} at {data_path}")
+    
+    df = pd.read_csv(data_path)
+    X = df.drop("label", axis=1).values
+    y = df["label"].values
+    
+    # Normalize
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    # Train
+    model = LogisticRegression(max_iter=200)
+    model.fit(X_scaled, y)
+    
+    weights = model.coef_.flatten().tolist()
+    num_samples = len(y)
+    
+    print(f"[{HOSPITAL_ID}] Trained on {num_samples} samples | "
+          f"Positive rate: {y.mean():.0%}")
+    
+    return weights, num_samples
