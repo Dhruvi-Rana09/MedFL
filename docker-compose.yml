@@ -1,0 +1,64 @@
+
+services:
+
+  aggregator:
+    build: ./aggregator-service
+    ports:
+      - "8000:8000"
+    
+
+  hospital1:
+    build: ./hospital-node
+    ports:
+      - "8011:8000"
+    environment:
+      - HOSPITAL_ID=hospital-1
+
+  hospital2:
+    build: ./hospital-node
+    ports:
+      - "8012:8000"
+    environment:
+      - HOSPITAL_ID=hospital-2
+
+  hospital3:
+    build: ./hospital-node
+    ports:
+      - "8013:8000"
+    environment:
+      - HOSPITAL_ID=hospital-3
+
+  hospital4:
+    build: ./hospital-node
+    ports:
+      - "8014:8000"
+    environment:
+      - HOSPITAL_ID=hospital-4
+
+  hospital5:
+    build: ./hospital-node
+    ports:
+      - "8015:8000"
+    environment:
+      - HOSPITAL_ID=hospital-5
+
+  auth:
+    build: ./auth-service
+    ports:
+      - "8003:8000"
+
+  storage:
+    build: ./model-storage-service
+    ports:
+      - "8004:8000"
+    volumes:
+      - model_data:/app/models
+
+  monitor:
+    build: ./monitoring-service
+    ports:
+      - "8005:8000"
+
+
+volumes:
+  model_data:
