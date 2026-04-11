@@ -9,8 +9,6 @@ services:
 
   hospital1:
     build: ./hospital-node
-<<<<<<< HEAD
-=======
     ports:
       - "8011:8000"
     environment:
@@ -46,7 +44,6 @@ services:
 
   auth:
     build: ./auth-service
->>>>>>> 6c3da512fe41a8dc25eac7b4469618c1558ca93f
     ports:
       - "8001:8000"
 
