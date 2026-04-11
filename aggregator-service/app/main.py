@@ -123,15 +123,11 @@ import httpx
 import asyncio
 
 from app.fedavg import federated_averaging, is_malicious
-<<<<<<< HEAD
-from app.config import MIN_UPDATES_TO_AGGREGATE
+from app.config import MIN_UPDATES_TO_AGGREGATE, HOSPITAL_URLS
 from auth_client import require_auth
 import os
 
 AUTH_URL = os.getenv("AUTH_URL", "http://localhost:8000")   
-=======
-from app.config import MIN_UPDATES_TO_AGGREGATE, HOSPITAL_URLS
->>>>>>> 6c3da512fe41a8dc25eac7b4469618c1558ca93f
 
 app = FastAPI(title="Aggregator Service")
 
