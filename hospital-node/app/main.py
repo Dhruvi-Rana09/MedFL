@@ -1,21 +1,88 @@
-from fastapi import FastAPI
-import requests
-import random
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import httpx
 
-app = FastAPI()
+from app.train import local_train
+from app.config import AGGREGATOR_URL, HOSPITAL_ID
+from auth_client import require_auth
+import os
 
-AGGREGATOR_URL = "http://aggregator:8000"
+AUTH_URL = os.getenv("AUTH_URL", "http://localhost:8000")
 
-@app.get("/")
-def root():
-    return {"message": "Hospital Node Running"}
+app = FastAPI(title="Hospital Node Service")
 
-@app.get("/train")
-def train():
-    # Fake training (simulate ML)
-    weights = [random.random(), random.random()]
+class GlobalModel(BaseModel):
+    weights: list[float]
 
-    requests.post(f"{AGGREGATOR_URL}/receive-update",
-                  json={"weights": weights})
+# ─── Health Check ───────────────────────────────────────────
+@app.get("/health")
+def health():
+    return {"status": "ok", "hospital_id": HOSPITAL_ID}
 
-    return {"trained_weights": weights}
+# ─── Train & Send Update ────────────────────────────────────
+@app.post("/train")
+@require_auth(AUTH_URL)
+async def train_and_send():
+    weights, num_samples = local_train()
+
+    payload = {
+        "hospital_id": HOSPITAL_ID,
+        "weights": weights,
+        "num_samples": num_samples
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{AGGREGATOR_URL}/receive-update",
+                json=payload,
+                timeout=10.0
+            )
+            response.raise_for_status()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Aggregator unreachable: {str(e)}")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Aggregator error: {e.response.text}")
+
+    return {
+        "status": "update_sent",
+        "hospital_id": HOSPITAL_ID,
+        "weights_sent": weights,
+        "num_samples": num_samples,
+        "aggregator_response": response.json()
+    }
+
+# ─── Receive Global Model (push FROM aggregator) ─────────────
+@app.post("/receive-model")
+@require_auth(AUTH_URL)
+async def receive_model(model: GlobalModel):
+    print(f"[{HOSPITAL_ID}] Received global model: {model.weights[:3]}...")
+    return {
+        "status": "model_received",
+        "hospital_id": HOSPITAL_ID,
+        "weights_preview": model.weights[:3]
+    }
+
+# ─── Fetch Global Model (pull BY hospital) ───────────────────
+@app.get("/fetch-model")
+@require_auth(AUTH_URL)
+async def fetch_global_model():
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{AGGREGATOR_URL}/send-model",
+                timeout=10.0
+            )
+            response.raise_for_status()
+            model = response.json()
+            print(f"[{HOSPITAL_ID}] Fetched global model round {model.get('round')}: {model['weights'][:3]}...")
+            return {
+                "status": "model_fetched",
+                "hospital_id": HOSPITAL_ID,
+                "round": model.get("round"),
+                "weights_preview": model["weights"][:3]
+            }
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Aggregator unreachable: {str(e)}")
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Aggregator error: {e.response.text}")
