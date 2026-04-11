@@ -13,6 +13,7 @@ services:
       - "8011:8000"
     environment:
       - HOSPITAL_ID=hospital-1
+      - AUTH_URL=http://auth:8000
 
   hospital2:
     build: ./hospital-node
@@ -20,6 +21,7 @@ services:
       - "8012:8000"
     environment:
       - HOSPITAL_ID=hospital-2
+      - AUTH_URL=http://auth:8000
 
   hospital3:
     build: ./hospital-node
@@ -27,6 +29,7 @@ services:
       - "8013:8000"
     environment:
       - HOSPITAL_ID=hospital-3
+      - AUTH_URL=http://auth:8000
 
   hospital4:
     build: ./hospital-node
@@ -34,6 +37,7 @@ services:
       - "8014:8000"
     environment:
       - HOSPITAL_ID=hospital-4
+      - AUTH_URL=http://auth:8000
 
   hospital5:
     build: ./hospital-node
@@ -41,6 +45,7 @@ services:
       - "8015:8000"
     environment:
       - HOSPITAL_ID=hospital-5
+      - AUTH_URL=http://auth:8000
 
   auth:
     build: ./auth-service # Build from Dockerfile in this folder
@@ -66,6 +71,21 @@ services:
     build: ./monitoring-service
     ports:
       - "8005:8000"
+    volumes:
+      - monitor-data:/app/data
+    environment:
+      - AUTH_URL=http://auth:8000
 
-networks:
-  medfl-net:
+  dashboard:
+    build:
+      context: ./monitoring-service
+      dockerfile: Dockerfile.dashboard
+    ports:
+      - "8501:8501"
+    depends_on:
+      - storage
+      - monitor
+
+volumes:
+  storage-data:
+  monitor-data:

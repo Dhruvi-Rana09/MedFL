@@ -150,6 +150,7 @@ def health():
     }
 
 
+
 @app.post("/receive-update")
 @require_auth(AUTH_URL)
 def receive_update(update: ModelUpdate):
@@ -194,12 +195,8 @@ async def _push_global_model_to_hospitals(weights: list[float], round_num: int):
 
 
 @app.post("/aggregate")
-<<<<<<< HEAD
 @require_auth(AUTH_URL)
 def aggregate():
-=======
-async def aggregate():                          # note: now async
->>>>>>> 6c3da512fe41a8dc25eac7b4469618c1558ca93f
     if len(pending_updates) < MIN_UPDATES_TO_AGGREGATE:
         raise HTTPException(
             status_code=400,
@@ -223,8 +220,67 @@ async def aggregate():                          # note: now async
         "weights_preview": global_model["weights"][:3]
     }
 
+def receive_update(update: dict):
+    weights = update.get("weights", [])
+    hospital = update.get("hospital_id", "unknown")
+
+    # Byzantine fault tolerance — reject malicious updates
+    if _is_malicious(weights):
+        _log_event(
+            event=f"Malicious update REJECTED from {hospital}",
+            details={"hospital_id": hospital, "weights": weights},
+        )
+        return {"status": "rejected", "reason": "malicious weights detected"}
+
+    updates.append(weights)
+    _log_event(
+        event=f"Hospital update received from {hospital}",
+        details={"hospital_id": hospital, "weight_count": len(weights)},
+    )
+    return {"status": "received"}
+
+
+@app.get("/aggregate")
+def aggregate():
+    global global_model, current_round
+
+    if not updates:
+        return {"message": "No updates to aggregate"}
+
+    # FedAvg — average all received weight vectors
+    avg = [sum(x) / len(x) for x in zip(*updates)]
+    current_round += 1
+    global_model["weights"] = avg
+    updates.clear()
+
+    # Simulated accuracy (in a real system this would come from evaluation)
+    simulated_accuracy = round(0.5 + (current_round * 0.05) + (sum(avg) / len(avg) * 0.1), 4)
+
+    # Persist to storage service
+    _store_model(
+        round_number=current_round,
+        weights=avg,
+        accuracy=simulated_accuracy,
+    )
+
+    # Log the aggregation event
+    _log_event(
+        event=f"Aggregation completed for round {current_round}",
+        details={
+            "round": current_round,
+            "accuracy": simulated_accuracy,
+            "num_updates": len(avg),
+        },
+    )
+
+    return {
+        "global_model": global_model,
+        "round": current_round,
+        "accuracy": simulated_accuracy,
+    }
 
 @app.get("/send-model")
 @require_auth(AUTH_URL)
 def send_model():
+    _log_event(event="Global model sent to requesting hospital")
     return global_model
