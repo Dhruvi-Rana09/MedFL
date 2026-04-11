@@ -37,6 +37,10 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from app.fedavg import federated_averaging, is_malicious
 from app.config import MIN_UPDATES_TO_AGGREGATE
+from auth_client import require_auth
+import os
+
+AUTH_URL = os.getenv("AUTH_URL", "http://localhost:8000")   
 
 app = FastAPI(title="Aggregator Service")
 
@@ -63,6 +67,7 @@ def health():
 
 # ─── Receive Update from Hospital ─────────────────
 @app.post("/receive-update")
+@require_auth(AUTH_URL)
 def receive_update(update: ModelUpdate):
 
     # Byzantine check
@@ -89,6 +94,7 @@ def receive_update(update: ModelUpdate):
 
 # ─── Aggregate All Updates ─────────────────────────
 @app.post("/aggregate")
+@require_auth(AUTH_URL)
 def aggregate():
     if len(pending_updates) < MIN_UPDATES_TO_AGGREGATE:
         raise HTTPException(
@@ -114,5 +120,6 @@ def aggregate():
 
 # ─── Send Global Model ─────────────────────────────
 @app.get("/send-model")
+@require_auth(AUTH_URL)
 def send_model():
     return global_model

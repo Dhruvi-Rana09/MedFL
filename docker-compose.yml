@@ -4,6 +4,8 @@ services:
     build: ./aggregator-service
     ports:
       - "8000:8000"
+    environment:
+      - AUTH_URL=http://auth:8000
 
   hospital1:
     build: ./hospital-node
