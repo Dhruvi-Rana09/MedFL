@@ -43,15 +43,6 @@ services:
       - HOSPITAL_ID=hospital-5
 
   auth:
-    build: ./auth-service
-    ports:
-      - "8001:8000"
-
-  hospital2:
-    build: ./hospital-node
-    ports:
-      - "8002:8000"
-  auth:
     build: ./auth-service # Build from Dockerfile in this folder
     ports:
       - "8003:8000" # laptop:8000 → container:8000
