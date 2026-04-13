@@ -129,6 +129,8 @@ import os
 
 AUTH_URL = os.getenv("AUTH_URL", "http://localhost:8000")   
 
+MODEL_STORAGE_URL = "http://storage:8000" 
+
 app = FastAPI(title="Aggregator Service")
 
 pending_updates: list[dict] = []
@@ -140,6 +142,20 @@ class ModelUpdate(BaseModel):
     weights: list[float]
     num_samples: int
 
+# ─── 🔁 LOAD MODEL FROM STORAGE ON STARTUP ─────────────────────
+@app.on_event("startup")
+async def load_latest_model():
+    global global_model
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(f"{MODEL_STORAGE_URL}/latest", timeout=5.0)
+            if resp.status_code == 200:
+                data = resp.json()
+                global_model["weights"] = data["weights"]
+                global_model["round"] = data["version"]
+                print(f"[Aggregator] Loaded model v{data['version']} from storage")
+    except Exception as e:
+        print(f"[Aggregator] No stored model found, starting fresh ({e})")
 
 @app.get("/health")
 def health():
@@ -188,7 +204,7 @@ async def _push_global_model_to_hospitals(weights: list[float], round_num: int):
                 )
                 print(f"[Aggregator] Pushed to {url} → {resp.status_code}")
         except Exception as e:
-            # Log but don't fail — a hospital being down shouldn't break aggregation
+            
             print(f"[Aggregator] Failed to push to {url}: {e}")
 
     await asyncio.gather(*[push_one(url) for url in HOSPITAL_URLS])
@@ -196,7 +212,7 @@ async def _push_global_model_to_hospitals(weights: list[float], round_num: int):
 
 @app.post("/aggregate")
 @require_auth(AUTH_URL)
-def aggregate():
+async def aggregate():
     if len(pending_updates) < MIN_UPDATES_TO_AGGREGATE:
         raise HTTPException(
             status_code=400,
@@ -204,18 +220,34 @@ def aggregate():
         )
 
     new_weights = federated_averaging(pending_updates)
+
     global_model["weights"] = new_weights
     global_model["round"] += 1
 
+    current_round = global_model["round"]
     hospitals_included = [u["hospital_id"] for u in pending_updates]
+
     pending_updates.clear()
 
-    # Push global model back to all hospitals
-    await _push_global_model_to_hospitals(global_model["weights"], global_model["round"])
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{MODEL_STORAGE_URL}/save",
+                json={
+                    "weights": global_model["weights"],
+                    "version": current_round
+                },
+                timeout=5.0
+            )
+            print(f"[Aggregator] Model v{current_round} saved → {resp.status_code}")
+    except Exception as e:
+        print(f"[Aggregator] Failed to save model: {e}")
+
+    await _push_global_model_to_hospitals(global_model["weights"], current_round)
 
     return {
         "status": "aggregated",
-        "round": global_model["round"],
+        "round": current_round,
         "hospitals_included": hospitals_included,
         "weights_preview": global_model["weights"][:3]
     }
