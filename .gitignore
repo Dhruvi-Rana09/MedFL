@@ -1,0 +1,15 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Environment ──────────────────────────────────────────────────────────────
+.env
+
+# ── Secrets ──────────────────────────────────────────────────────────────────
+*.pem
+
+# ── Large binary datasets (reproducible via `make seed`) ─────────────────────
+data/hospital_*/dataset.pkl
+
+# NOTE: Do NOT gitignore generated/ — we commit the gRPC stubs

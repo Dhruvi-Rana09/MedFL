@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedFL — Federated Learning Command Center</title>
+    <meta name="description" content="Real-time monitoring dashboard for the MedFL federated learning platform. Track training rounds, model convergence, hospital node status, and security audit logs.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <!-- ── Header ────────────────────────────────────────────────────── -->
+    <header id="main-header">
+        <div class="header-left">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                        <circle cx="14" cy="14" r="12" stroke="url(#logoGrad)" stroke-width="2.5" fill="none"/>
+                        <path d="M9 14h10M14 9v10" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round"/>
+                        <defs><linearGradient id="logoGrad" x1="0" y1="0" x2="28" y2="28">
+                            <stop stop-color="#6366f1"/><stop offset="1" stop-color="#06b6d4"/>
+                        </linearGradient></defs>
+                    </svg>
+                </div>
+                <div>
+                    <h1>MedFL</h1>
+                    <span class="subtitle">Federated Learning Command Center</span>
+                </div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status-badge" id="system-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting…</span>
+            </div>
+            <div class="clock" id="clock"></div>
+        </div>
+    </header>
+
+    <!-- ── Main Grid ─────────────────────────────────────────────────── -->
+    <main id="dashboard">
+
+        <!-- ── Overview Cards ────────────────────────────────────────── -->
+        <section class="overview-cards" id="overview-section">
+            <div class="card metric-card" id="card-rounds">
+                <div class="metric-icon rounds-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="10"/></svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-value" id="total-rounds">0</span>
+                    <span class="metric-label">Total Rounds</span>
+                </div>
+            </div>
+            <div class="card metric-card" id="card-accuracy">
+                <div class="metric-icon accuracy-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-value" id="global-accuracy">0.00%</span>
+                    <span class="metric-label">Global Accuracy</span>
+                </div>
+            </div>
+            <div class="card metric-card" id="card-loss">
+                <div class="metric-icon loss-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-value" id="global-loss">0.000</span>
+                    <span class="metric-label">Global Loss</span>
+                </div>
+            </div>
+            <div class="card metric-card" id="card-hospitals">
+                <div class="metric-icon hospital-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-value" id="active-hospitals">0</span>
+                    <span class="metric-label">Active Hospitals</span>
+                </div>
+            </div>
+            <div class="card metric-card" id="card-algorithm">
+                <div class="metric-icon algo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 22,8.5 22,15.5 12,22 2,15.5 2,8.5"/><line x1="12" y1="22" x2="12" y2="8.5"/><polyline points="22,8.5 12,15 2,8.5"/></svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-value" id="current-algorithm">—</span>
+                    <span class="metric-label">Algorithm</span>
+                </div>
+            </div>
+            <div class="card metric-card" id="card-best">
+                <div class="metric-icon best-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+                </div>
+                <div class="metric-body">
+                    <span class="metric-value" id="best-accuracy">0.00%</span>
+                    <span class="metric-label">Best Accuracy</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Charts Row ────────────────────────────────────────────── -->
+        <section class="charts-row">
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h2>Accuracy Convergence</h2>
+                    <span class="badge" id="acc-trend-badge">—</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="accuracy-chart"></canvas>
+                </div>
+            </div>
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h2>Loss Convergence</h2>
+                    <span class="badge badge-loss" id="loss-trend-badge">—</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="loss-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Hospital Status + Controls ────────────────────────────── -->
+        <section class="bottom-row">
+            <div class="card hospital-panel">
+                <div class="card-header">
+                    <h2>Hospital Nodes</h2>
+                    <span class="badge badge-info" id="hospital-count-badge">0 nodes</span>
+                </div>
+                <div class="hospital-grid" id="hospital-grid">
+                    <div class="hospital-placeholder">Waiting for hospital data…</div>
+                </div>
+            </div>
+
+            <div class="card controls-panel">
+                <div class="card-header">
+                    <h2>Training Controls</h2>
+                </div>
+                <div class="controls-body">
+                    <div class="control-group">
+                        <label for="algo-select">Algorithm</label>
+                        <select id="algo-select">
+                            <option value="fedprox" selected>FedProx</option>
+                            <option value="dwfed">DWFed</option>
+                            <option value="fedavg">FedAvg</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="rounds-input">Rounds</label>
+                        <input type="number" id="rounds-input" value="5" min="1" max="50">
+                    </div>
+                    <button id="btn-start-auto" class="btn btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg>
+                        Start Training
+                    </button>
+                    <button id="btn-start-single" class="btn btn-secondary">
+                        Run Single Round
+                    </button>
+                    <div class="round-status" id="round-status-panel">
+                        <span class="round-state" id="round-state">IDLE</span>
+                        <span class="round-progress" id="round-progress"></span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Activity Feed + Security Panel ────────────────────────── -->
+        <section class="bottom-row">
+            <div class="card activity-panel">
+                <div class="card-header">
+                    <h2>Activity Feed</h2>
+                    <span class="live-dot"></span>
+                </div>
+                <div class="activity-feed" id="activity-feed">
+                    <div class="activity-placeholder">Waiting for events…</div>
+                </div>
+            </div>
+
+            <div class="card security-panel">
+                <div class="card-header">
+                    <h2>Security & Compliance</h2>
+                    <span class="badge badge-secure">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Encrypted
+                    </span>
+                </div>
+                <div class="security-body">
+                    <div class="security-item">
+                        <span class="security-label">Weight Encryption</span>
+                        <span class="security-value secure">AES-Fernet (128-bit CBC + HMAC)</span>
+                    </div>
+                    <div class="security-item">
+                        <span class="security-label">Differential Privacy</span>
+                        <span class="security-value secure" id="dp-status">ε = 1.0, δ = 1e-5</span>
+                    </div>
+                    <div class="security-item">
+                        <span class="security-label">Authentication</span>
+                        <span class="security-value secure">RS256 JWT + Redis Revocation</span>
+                    </div>
+                    <div class="security-item">
+                        <span class="security-label">Transport</span>
+                        <span class="security-value secure">gRPC + Encrypted Payloads</span>
+                    </div>
+                    <div class="security-item">
+                        <span class="security-label">Audit Trail</span>
+                        <span class="security-value" id="audit-count">0 events</span>
+                    </div>
+                </div>
+                <div class="card-header" style="margin-top: 16px;">
+                    <h3>Audit Log</h3>
+                </div>
+                <div class="audit-log" id="audit-log">
+                    <div class="activity-placeholder">No audit events yet</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Round History Table ────────────────────────────────────── -->
+        <section class="full-width">
+            <div class="card table-card">
+                <div class="card-header">
+                    <h2>Round History</h2>
+                    <span class="badge badge-info" id="history-count-badge">0 rounds</span>
+                </div>
+                <div class="table-wrapper">
+                    <table id="history-table">
+                        <thead>
+                            <tr>
+                                <th>Round</th>
+                                <th>Algorithm</th>
+                                <th>Accuracy</th>
+                                <th>Loss</th>
+                                <th>Duration</th>
+                                <th>Participants</th>
+                                <th>ISH Weights</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>MedFL Federated Learning Platform — Secure · Private · Non-IID Optimized</p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

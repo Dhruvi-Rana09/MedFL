@@ -1,32 +1,219 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  MedFL — Federated Learning Platform
+#  Docker Compose Configuration
+# ═══════════════════════════════════════════════════════════════════════════
+
+x-hospital-common: &hospital-common
+  build:
+    context: ./services/hospital_node
+    dockerfile: Dockerfile
+  environment: &hospital-env
+    AUTH_URL: http://auth:8000
+    ORCHESTRATOR_URL: http://orchestrator:8000
+    ORCHESTRATOR_GRPC: orchestrator:50051
+    ENCRYPTION_KEY: FSRmbNxUQ4mDE9RmDW8ZOnOKyg5CvQ_TG7V6FH08vGg=
+    LOCAL_EPOCHS: "2"
+    BATCH_SIZE: "32"
+    LEARNING_RATE: "0.01"
+    FEDPROX_MU: "0.01"
+    DP_EPSILON: "inf"
+    DP_DELTA: "1e-5"
+    DP_MAX_GRAD_NORM: "1.0"
+    N_CLASSES: "10"
+  depends_on:
+    auth:
+      condition: service_healthy
+    orchestrator:
+      condition: service_started
+  networks:
+    - medfl-net
+  restart: unless-stopped
 
 services:
+  # ── Redis ──────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - medfl-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
 
-  aggregator:
-    build: ./aggregator-service
+  # ── MinIO Object Storage ───────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - medfl-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ── Auth Service ───────────────────────────────────────────────────────
+  auth:
+    build:
+      context: ./services/auth
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      JWT_PRIVATE_KEY_PATH: certs/private.pem
+      JWT_PUBLIC_KEY_PATH: certs/public.pem
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - medfl-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; r=httpx.get('http://localhost:8000/health'); r.raise_for_status()"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
-  hospital1:
-    build: ./hospital-node
-    ports:
-      - "8001:8000"
-
-  hospital2:
-    build: ./hospital-node
-    ports:
-      - "8002:8000"
-
-  auth:
-    build: ./auth-service
+  # ── Aggregation Service ────────────────────────────────────────────────
+  aggregation:
+    build:
+      context: ./services/aggregation
+      dockerfile: Dockerfile
     ports:
       - "8003:8000"
+    networks:
+      - medfl-net
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health').raise_for_status()"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
 
-  storage:
-    build: ./model-storage-service
+  # ── Model Storage Service ──────────────────────────────────────────────
+  model-storage:
+    build:
+      context: ./services/model_storage
+      dockerfile: Dockerfile
     ports:
       - "8004:8000"
+    environment:
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: medfl-models
+      MINIO_SECURE: "false"
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - medfl-net
+    restart: unless-stopped
 
-  monitor:
-    build: ./monitoring-service
+  # ── Orchestrator Service ───────────────────────────────────────────────
+  orchestrator:
+    build:
+      context: ./services/orchestrator
+      dockerfile: Dockerfile
     ports:
-      - "8005:8000"
+      - "8001:8000"
+      - "50051:50051"
+    environment:
+      AGG_URL: http://aggregation:8000
+      AUTH_URL: http://auth:8000
+      MONITORING_URL: http://monitoring:8000
+      MODEL_STORAGE_URL: http://model-storage:8000
+      MINIO_ENDPOINT: minio:9000
+      MINIO_USER: minioadmin
+      MINIO_PASS: minioadmin
+      ENCRYPTION_KEY: FSRmbNxUQ4mDE9RmDW8ZOnOKyg5CvQ_TG7V6FH08vGg=
+      FEDPROX_MU: "0.01"
+      AGGREGATION_ALGORITHM: fedprox
+      HOSPITAL_A_URL: http://hospital-a:8000
+      HOSPITAL_B_URL: http://hospital-b:8000
+      HOSPITAL_C_URL: http://hospital-c:8000
+    depends_on:
+      auth:
+        condition: service_healthy
+      aggregation:
+        condition: service_started
+      model-storage:
+        condition: service_started
+    networks:
+      - medfl-net
+    restart: unless-stopped
+
+  # ── Monitoring Service (Dashboard) ─────────────────────────────────────
+  monitoring:
+    build:
+      context: ./services/monitoring
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8000"
+    networks:
+      - medfl-net
+    restart: unless-stopped
+
+  # ── Hospital Node A (Cardiac — classes 0,1,2,3) ────────────────────────
+  hospital-a:
+    <<: *hospital-common
+    ports:
+      - "8010:8000"
+    environment:
+      <<: *hospital-env
+      HOSPITAL_ID: hospital-a
+      HOSPITAL_PASSWORD: hospital_a_pass
+      DATA_PATH: /data/dataset.pkl
+    volumes:
+      - ./data/hospital_a:/data:ro
+
+  # ── Hospital Node B (General — classes 3,4,5,6) ────────────────────────
+  hospital-b:
+    <<: *hospital-common
+    ports:
+      - "8011:8000"
+    environment:
+      <<: *hospital-env
+      HOSPITAL_ID: hospital-b
+      HOSPITAL_PASSWORD: hospital_b_pass
+      DATA_PATH: /data/dataset.pkl
+    volumes:
+      - ./data/hospital_b:/data:ro
+
+  # ── Hospital Node C (Paediatric — classes 6,7,8,9) ─────────────────────
+  hospital-c:
+    <<: *hospital-common
+    ports:
+      - "8012:8000"
+    environment:
+      <<: *hospital-env
+      HOSPITAL_ID: hospital-c
+      HOSPITAL_PASSWORD: hospital_c_pass
+      DATA_PATH: /data/dataset.pkl
+    volumes:
+      - ./data/hospital_c:/data:ro
+
+networks:
+  medfl-net:
+    driver: bridge
+
+volumes:
+  minio-data:
