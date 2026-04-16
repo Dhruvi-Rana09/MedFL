@@ -85,12 +85,19 @@ async def trigger_train():
     return {"status": "training_started", "hospital_id": HOSPITAL_ID}
 
 
+@app.post("/train/reset")
+async def reset_training():
+    """Force-reset training status to idle (for stuck rounds)."""
+    global training_status
+    training_status = "idle"
+    return {"status": "idle", "hospital_id": HOSPITAL_ID}
+
+
 async def _run_training():
     """Background task to execute training and record results."""
     global training_status, last_accuracy, last_loss, rounds_completed
     try:
         result = await participate_in_round(current_token)
-        training_status = "done"
         last_accuracy = result.get("accuracy", 0.0)
         last_loss = result.get("loss", 0.0)
         rounds_completed += 1
@@ -107,7 +114,9 @@ async def _run_training():
         )
     except Exception as e:
         logger.error("[%s] Training error: %s", HOSPITAL_ID, e)
-        training_status = "error"
+    finally:
+        # Always reset to idle so the node can accept the next round
+        training_status = "idle"
 
 
 @app.get("/status")
