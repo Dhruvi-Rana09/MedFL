@@ -51,6 +51,18 @@ async def lifespan(app: FastAPI):
                 response.raise_for_status()
                 current_token = response.json()["access_token"]
                 logger.info("[%s] Authenticated — token acquired", HOSPITAL_ID)
+
+                # Register with Orchestrator
+                try:
+                    reg_resp = await client.post(
+                        f"{settings.ORCHESTRATOR_URL}/hospitals/register",
+                        json={"hospital_id": HOSPITAL_ID, "url": settings.HOSPITAL_URL}
+                    )
+                    reg_resp.raise_for_status()
+                    logger.info("[%s] Registered with Orchestrator at %s", HOSPITAL_ID, settings.HOSPITAL_URL)
+                except Exception as ex:
+                    logger.warning("[%s] Orchestrator registration failed: %s", HOSPITAL_ID, ex)
+
                 break
             except Exception as e:
                 logger.warning("[%s] Startup auth attempt %d failed: %s", HOSPITAL_ID, attempt + 1, e)

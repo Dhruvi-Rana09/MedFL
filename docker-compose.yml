@@ -180,6 +180,7 @@ services:
     environment:
       <<: *hospital-env
       HOSPITAL_ID: hospital-a
+      HOSPITAL_URL: http://hospital-a:8000
       HOSPITAL_PASSWORD: hospital_a_pass
       DATA_PATH: /data/dataset.pkl
     volumes:
@@ -193,6 +194,7 @@ services:
     environment:
       <<: *hospital-env
       HOSPITAL_ID: hospital-b
+      HOSPITAL_URL: http://hospital-b:8000
       HOSPITAL_PASSWORD: hospital_b_pass
       DATA_PATH: /data/dataset.pkl
     volumes:
@@ -206,6 +208,7 @@ services:
     environment:
       <<: *hospital-env
       HOSPITAL_ID: hospital-c
+      HOSPITAL_URL: http://hospital-c:8000
       HOSPITAL_PASSWORD: hospital_c_pass
       DATA_PATH: /data/dataset.pkl
     volumes:

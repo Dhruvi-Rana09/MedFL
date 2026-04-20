@@ -33,6 +33,7 @@ class Settings:
     AUTH_SERVICE_URL: str = os.environ.get("AUTH_URL", "http://auth:8000")
     ORCHESTRATOR_URL: str = os.environ.get("ORCHESTRATOR_URL", "http://orchestrator:8000")
     ORCHESTRATOR_GRPC: str = os.environ.get("ORCHESTRATOR_GRPC", "orchestrator:50051")
+    HOSPITAL_URL: str = os.environ.get("HOSPITAL_URL", "http://localhost:8010")
 
     # ── Number of classes ────────────────────────────────────────────────
     N_CLASSES: int = int(os.environ.get("N_CLASSES", "10"))

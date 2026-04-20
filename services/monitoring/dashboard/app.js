@@ -283,9 +283,12 @@ function renderHospitals(hospitals) {
 
         return `
             <div class="hospital-node-card">
-                <div class="hospital-node-header">
-                    <span class="hospital-node-name">${name}</span>
-                    <span class="hospital-node-status ${status}">${status}</span>
+                <div class="hospital-node-header" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <span class="hospital-node-name">${name}</span>
+                        <span class="hospital-node-status ${status}">${status}</span>
+                    </div>
+                    ${data.ip_address ? `<span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">📡 ${data.ip_address}</span>` : ''}
                 </div>
                 <div class="hospital-node-metrics">
                     <div class="hospital-metric">
@@ -413,7 +416,7 @@ document.getElementById('btn-start-auto').addEventListener('click', async () => 
             body: JSON.stringify({
                 n_rounds: nRounds,
                 algorithm: algo,
-                hospital_ids: ['hospital-a', 'hospital-b', 'hospital-c']
+                hospital_ids: []
             })
         });
         const result = await resp.json();
@@ -434,7 +437,7 @@ document.getElementById('btn-start-single').addEventListener('click', async () =
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 algorithm: algo,
-                hospital_ids: ['hospital-a', 'hospital-b', 'hospital-c']
+                hospital_ids: []
             })
         });
         const result = await resp.json();

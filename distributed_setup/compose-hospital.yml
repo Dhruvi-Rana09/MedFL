@@ -1,0 +1,26 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Edge Node: Hospital Client
+#  (Run this on ANY machine, just set HOSPITAL_ID properly)
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  hospital-node:
+    build:
+      context: ../services/hospital_node
+      dockerfile: Dockerfile
+    ports:
+      - "8010:8000"
+    env_file:
+      - medfl.env # Inherits the central IPs
+    environment:
+      HOSPITAL_ID: ${HOSPITAL_ID:-hospital-a} # Override this for B or C
+      HOSPITAL_PASSWORD: ${HOSPITAL_PASSWORD:-hospital_a_pass}
+      HOSPITAL_URL: ${HOSPITAL_URL:-http://localhost:8010} # Override with your Tailscale IP (e.g. http://100.x.x.x:8010)
+      DATA_PATH: /data/dataset.pkl
+    volumes:
+      # Maps local data. Make sure data exists here before running!
+      - ../data/${HOSPITAL_ID:-hospital_a}:/data:ro
+    network_mode: "host"
+    restart: unless-stopped

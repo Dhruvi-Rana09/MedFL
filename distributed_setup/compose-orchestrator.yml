@@ -1,0 +1,26 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Device 2: Orchestrator Node (Control Plane)
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  orchestrator:
+    build:
+      context: ../services/orchestrator
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+      - "50051:50051"
+    env_file:
+      - medfl.env
+    environment:
+      MINIO_USER: minioadmin
+      MINIO_PASS: minioadmin
+      # In remote mode, orchestrator doesn't know hospital IPs until they register (optional)
+      # Or you can hardcode the expected tailscale IPs of the hospitals here if you know them.
+      HOSPITAL_A_URL: http://100.x.x.x:8010 
+      HOSPITAL_B_URL: http://100.x.x.y:8011
+      HOSPITAL_C_URL: http://100.x.x.z:8012
+    network_mode: "host" # Bind directly to host networking
+    restart: unless-stopped

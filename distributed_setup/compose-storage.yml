@@ -1,0 +1,46 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Device 5: Storage Node
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  minio:
+    image: minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    network_mode: "host"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  model-storage:
+    build:
+      context: ../services/model_storage
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8000"
+    environment:
+      MINIO_ENDPOINT: localhost:9000 # MinIO is on the same machine
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: medfl-models
+      MINIO_SECURE: "false"
+    depends_on:
+      minio:
+        condition: service_healthy
+    network_mode: "host"
+    restart: unless-stopped
+
+volumes:
+  minio-data:

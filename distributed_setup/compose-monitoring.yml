@@ -1,0 +1,15 @@
+version: "3.9"
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  Device 4: Monitoring Node (Telemetry plane)
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  monitoring:
+    build:
+      context: ../services/monitoring
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8000"
+    network_mode: "host"
+    restart: unless-stopped

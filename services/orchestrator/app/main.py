@@ -45,12 +45,8 @@ manager = RoundManager(
     monitoring_url=MONITORING_URL,
 )
 
-# Hospital endpoint registry
-HOSPITAL_ENDPOINTS = {
-    "hospital-a": os.environ.get("HOSPITAL_A_URL", "http://hospital-a:8000"),
-    "hospital-b": os.environ.get("HOSPITAL_B_URL", "http://hospital-b:8000"),
-    "hospital-c": os.environ.get("HOSPITAL_C_URL", "http://hospital-c:8000"),
-}
+# Hospital endpoint registry (Dynamically populated)
+HOSPITAL_ENDPOINTS = {}
 
 _grpc_task = None
 
@@ -87,21 +83,38 @@ app.add_middleware(
 
 
 class StartRoundRequest(BaseModel):
-    hospital_ids: List[str] = ["hospital-a", "hospital-b", "hospital-c"]
+    hospital_ids: List[str] = []
     algorithm: str = "fedprox"
 
 
 class AutoRoundRequest(BaseModel):
     n_rounds: int = 5
-    hospital_ids: List[str] = ["hospital-a", "hospital-b", "hospital-c"]
+    hospital_ids: List[str] = []
     algorithm: str = "fedprox"
 
+
+class HospitalRegisterRequest(BaseModel):
+    hospital_id: str
+    url: str
+
+
+@app.post("/hospitals/register")
+async def register_hospital(req: HospitalRegisterRequest):
+    """Dynamically register a hospital node."""
+    HOSPITAL_ENDPOINTS[req.hospital_id] = req.url
+    logger.info("Registered hospital: %s at %s", req.hospital_id, req.url)
+    return {"status": "registered", "hospital_id": req.hospital_id, "url": req.url}
 
 @app.post("/rounds/start")
 async def start_round(req: StartRoundRequest):
     """Initiate a new training round and trigger hospitals."""
     if manager.state not in (RoundState.IDLE, RoundState.DONE):
         raise HTTPException(status_code=409, detail="Round already in progress")
+
+    if not req.hospital_ids:
+        req.hospital_ids = list(HOSPITAL_ENDPOINTS.keys())
+        if not req.hospital_ids:
+            raise HTTPException(status_code=400, detail="No hospitals registered")
 
     os.environ["AGGREGATION_ALGORITHM"] = req.algorithm
     manager.start_round(req.hospital_ids)
@@ -136,6 +149,11 @@ async def auto_rounds(req: AutoRoundRequest):
     """Run N training rounds automatically with delays."""
     if manager.state not in (RoundState.IDLE, RoundState.DONE):
         raise HTTPException(status_code=409, detail="Round already in progress")
+
+    if not req.hospital_ids:
+        req.hospital_ids = list(HOSPITAL_ENDPOINTS.keys())
+        if not req.hospital_ids:
+            raise HTTPException(status_code=400, detail="No hospitals registered")
 
     os.environ["AGGREGATION_ALGORITHM"] = req.algorithm
 
@@ -222,9 +240,14 @@ async def list_hospitals():
             try:
                 resp = await client.get(f"{url}/status")
                 resp.raise_for_status()
-                statuses[hid] = resp.json()
+                data = resp.json()
+                from urllib.parse import urlparse
+                data["ip_address"] = urlparse(url).hostname if url else "local"
+                statuses[hid] = data
             except Exception:
-                statuses[hid] = {"status": "unreachable", "hospital_id": hid}
+                from urllib.parse import urlparse
+                ip = urlparse(url).hostname if url else "unknown"
+                statuses[hid] = {"status": "unreachable", "hospital_id": hid, "ip_address": ip}
     return statuses
 
 
