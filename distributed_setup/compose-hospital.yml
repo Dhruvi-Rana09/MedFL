@@ -44,5 +44,5 @@ services:
     volumes:
       # Each hospital reads from its own data subfolder
       - ../data/${HOSPITAL_ID:-hospital_a}:/data:ro
-    network_mode: "host"
+
     restart: unless-stopped

@@ -18,9 +18,9 @@ services:
       PORT: "8002"  # Bind on 8002 to match medfl.env ORCHESTRATOR_URL
       MINIO_USER: minioadmin
       MINIO_PASS: minioadmin
-      # Set these to the LAN IPs of whichever machine runs each hospital node
-      HOSPITAL_A_URL: http://YOUR_LAN_IP:8010
-      HOSPITAL_B_URL: http://YOUR_LAN_IP:8011
-      HOSPITAL_C_URL: http://YOUR_LAN_IP:8012
-    network_mode: "host" # Bind directly to host networking
+      # Member 3 runs hospital-a (:8010) and hospital-b (:8011) — pulled from medfl.env HOSPITAL_IP
+      HOSPITAL_A_URL: http://${HOSPITAL_IP}:8010
+      HOSPITAL_B_URL: http://${HOSPITAL_IP}:8011
+      HOSPITAL_C_URL: http://${HOSPITAL_IP}:8012
+
     restart: unless-stopped

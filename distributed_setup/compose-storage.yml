@@ -2,6 +2,9 @@ version: "3.9"
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  Device 5: Storage Node
+#
+#  Uses bridge networking (host mode is not supported on Windows Docker Desktop).
+#  MinIO on host port 9000/9001; model-storage on host port 8005.
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
@@ -16,7 +19,6 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio-data:/data
-    network_mode: "host"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -31,8 +33,8 @@ services:
     ports:
       - "8005:8005"
     environment:
-      PORT: "8005"  # Bind on 8005 to match medfl.env MODEL_STORAGE_URL
-      MINIO_ENDPOINT: localhost:9000 # MinIO is on the same machine
+      PORT: "8005"
+      MINIO_ENDPOINT: minio:9000
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
       MINIO_BUCKET: medfl-models
@@ -40,7 +42,6 @@ services:
     depends_on:
       minio:
         condition: service_healthy
-    network_mode: "host"
     restart: unless-stopped
 
 volumes:

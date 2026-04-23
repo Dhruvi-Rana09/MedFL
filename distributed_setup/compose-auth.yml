@@ -2,13 +2,14 @@ version: "3.9"
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  Device 1: Auth Node (Identity Provider)
+#
+#  Uses bridge networking (host mode is not supported on Windows Docker Desktop).
+#  Auth binds on host port 8001; Redis is internal only.
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -23,14 +24,13 @@ services:
     ports:
       - "8001:8001"
     environment:
-      REDIS_URL: redis://localhost:6379/0  # Uses localhost because Redis is on the same machine
+      REDIS_URL: redis://redis:6379/0
       JWT_PRIVATE_KEY_PATH: certs/private.pem
       JWT_PUBLIC_KEY_PATH: certs/public.pem
-      PORT: "8001"  # Bind on 8001 so multiple services can co-exist on one machine
+      PORT: "8001"
     depends_on:
       redis:
         condition: service_healthy
-    network_mode: "host" # Bind directly to host networking
     healthcheck:
       test: ["CMD", "python", "-c", "import httpx; r=httpx.get('http://localhost:8001/health'); r.raise_for_status()"]
       interval: 10s
