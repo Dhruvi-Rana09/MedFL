@@ -43,7 +43,7 @@ graph TD
     hb -.->|PyTorch Delta Push| agg
     hc -.->|PyTorch Delta Push| agg
 
-    agg ==>|Aggregated Weights (FedAvg/DWFed)| orc
+    agg ==>|"Aggregated Weights (FedAvg/DWFed)"| orc
     orc -->|Round Analytics| mon
 ```
 

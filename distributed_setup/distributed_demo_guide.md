@@ -9,7 +9,7 @@ By following this guide, you will run 5 separate pieces of the architecture on 5
 ## 🛠 Phase 1: Team Pre-requisites (Do this before the presentation)
 
 1. **Install Docker Desktop**: Every member must have Docker installed and running on their laptop.
-2. **Install Tailscale**: Every member must go to [Tailscale.com](https://tailscale.com) and sign in using the **same group account** (e.g., a shared team Google or GitHub account).
+2. **Install Tailscale**: Every member must install [Tailscale](https://tailscale.com). **One team member** (the Admin) should sign in, go to the Tailscale Admin Console -> **Users**, and click **"Invite Users"** to send an invite link to the rest of the team. The other members should sign in using that invite link so you all join the same private network (Tailnet).
 3. **Get Your IPs**: Open the Tailscale app on your computer and copy your `100.x.x.x` IP address.
 4. **Distribute the Code**: Ensure every team member has a copy of this entire repository.
 
