@@ -10,6 +10,8 @@ services:
       context: ../services/monitoring
       dockerfile: Dockerfile
     ports:
-      - "8002:8000"
+      - "8004:8004"
+    environment:
+      PORT: "8004"  # Bind on 8004 to match medfl.env MONITORING_URL
     network_mode: "host"
     restart: unless-stopped

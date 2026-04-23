@@ -2,7 +2,23 @@ version: "3.9"
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  Edge Node: Hospital Client
-#  (Run this on ANY machine, just set HOSPITAL_ID properly)
+#
+#  Run ONE hospital per command — set env vars before each launch:
+#
+#  Hospital A (port 8010):
+#    $env:HOSPITAL_ID="hospital-a"; $env:HOSPITAL_PORT="8010"; $env:HOSPITAL_URL="http://<THIS_DEVICE_LAN_IP>:8010"
+#    docker compose -f compose-hospital.yml --env-file medfl.env up -d
+#
+#  Hospital B (port 8011) — same device or different:
+#    $env:HOSPITAL_ID="hospital-b"; $env:HOSPITAL_PORT="8011"; $env:HOSPITAL_URL="http://<THIS_DEVICE_LAN_IP>:8011"
+#    docker compose -f compose-hospital.yml --env-file medfl.env up -d
+#
+#  Hospital C (port 8012):
+#    $env:HOSPITAL_ID="hospital-c"; $env:HOSPITAL_PORT="8012"; $env:HOSPITAL_URL="http://<THIS_DEVICE_LAN_IP>:8012"
+#    docker compose -f compose-hospital.yml --env-file medfl.env up -d
+#
+#  Multiple hospitals on the SAME device is fully supported — each just
+#  needs a unique HOSPITAL_ID and HOSPITAL_PORT.
 # ═══════════════════════════════════════════════════════════════════════════
 
 services:
@@ -10,17 +26,23 @@ services:
     build:
       context: ../services/hospital_node
       dockerfile: Dockerfile
+    # container_name makes each instance identifiable in `docker ps`
+    container_name: medfl-${HOSPITAL_ID:-hospital-a}
     ports:
-      - "8010:8000"
+      - "${HOSPITAL_PORT:-8010}:${HOSPITAL_PORT:-8010}"
     env_file:
-      - medfl.env # Inherits the central IPs
+      - medfl.env   # Inherits all service URLs (AUTH_URL, ORCHESTRATOR_GRPC, etc.)
     environment:
-      HOSPITAL_ID: ${HOSPITAL_ID:-hospital-a} # Override this for B or C
+      HOSPITAL_ID: ${HOSPITAL_ID:-hospital-a}
       HOSPITAL_PASSWORD: ${HOSPITAL_PASSWORD:-hospital_a_pass}
-      HOSPITAL_URL: ${HOSPITAL_URL:-http://localhost:8010} # Override with your Tailscale IP (e.g. http://100.x.x.x:8010)
+      # HOSPITAL_URL is what the orchestrator calls back to reach THIS node.
+      # Must be this device's LAN IP + the chosen port.
+      HOSPITAL_URL: ${HOSPITAL_URL:-http://localhost:8010}
       DATA_PATH: /data/dataset.pkl
+      # PORT tells uvicorn which port to bind — must match HOSPITAL_PORT above
+      PORT: ${HOSPITAL_PORT:-8010}
     volumes:
-      # Maps local data. Make sure data exists here before running!
+      # Each hospital reads from its own data subfolder
       - ../data/${HOSPITAL_ID:-hospital_a}:/data:ro
     network_mode: "host"
     restart: unless-stopped

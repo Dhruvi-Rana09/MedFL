@@ -29,8 +29,9 @@ services:
       context: ../services/model_storage
       dockerfile: Dockerfile
     ports:
-      - "8004:8000"
+      - "8005:8005"
     environment:
+      PORT: "8005"  # Bind on 8005 to match medfl.env MODEL_STORAGE_URL
       MINIO_ENDPOINT: localhost:9000 # MinIO is on the same machine
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin

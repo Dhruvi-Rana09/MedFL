@@ -10,17 +10,17 @@ services:
       context: ../services/orchestrator
       dockerfile: Dockerfile
     ports:
-      - "8001:8000"
+      - "8002:8002"
       - "50051:50051"
     env_file:
       - medfl.env
     environment:
+      PORT: "8002"  # Bind on 8002 to match medfl.env ORCHESTRATOR_URL
       MINIO_USER: minioadmin
       MINIO_PASS: minioadmin
-      # In remote mode, orchestrator doesn't know hospital IPs until they register (optional)
-      # Or you can hardcode the expected tailscale IPs of the hospitals here if you know them.
-      HOSPITAL_A_URL: http://100.x.x.x:8010 
-      HOSPITAL_B_URL: http://100.x.x.y:8011
-      HOSPITAL_C_URL: http://100.x.x.z:8012
+      # Set these to the LAN IPs of whichever machine runs each hospital node
+      HOSPITAL_A_URL: http://YOUR_LAN_IP:8010
+      HOSPITAL_B_URL: http://YOUR_LAN_IP:8011
+      HOSPITAL_C_URL: http://YOUR_LAN_IP:8012
     network_mode: "host" # Bind directly to host networking
     restart: unless-stopped
