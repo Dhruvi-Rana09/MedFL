@@ -251,6 +251,26 @@ async def list_hospitals():
     return statuses
 
 
+@app.post("/rounds/reset")
+async def reset_round():
+    """Force-reset a stuck round back to DONE state."""
+    if manager.state in (RoundState.IDLE, RoundState.DONE):
+        return {"status": "already_idle", "round": manager.current_round}
+
+    old_state = manager.state.value
+    manager.state = RoundState.DONE
+    manager.updates.clear()
+    logger.warning(
+        "Force-reset round %d from state '%s' to DONE",
+        manager.current_round, old_state,
+    )
+    return {
+        "status": "reset",
+        "round": manager.current_round,
+        "previous_state": old_state,
+    }
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "grpc_port": 50051, "round": manager.current_round}
